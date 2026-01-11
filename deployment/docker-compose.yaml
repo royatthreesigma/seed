@@ -1,0 +1,55 @@
+---
+services:
+  db:
+    image: postgres:17-alpine3.22
+    container_name: db
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    env_file:
+      - .env.api.development
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    container_name: api
+    env_file:
+      - .env.api.development
+    ports:
+      - "8000:8000"
+    volumes:
+      - ../backend:/backend # Mount local code for live development changes
+      - /var/run/docker.sock:/var/run/docker.sock # Docker socket for container management
+    # Install requirements on startup since volume mount replaces built-in packages
+    command: sh -c "pip install -r requirements.txt && python manage.py runserver 0.0.0.0:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  app:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+      target: dev
+    container_name: app
+    ports:
+      - "3000:3000"
+    volumes:
+      - ../frontend:/app # live-code mount for development
+      - app-node-modules:/app/node_modules # preserve container's node_modules
+    env_file:
+      - .env.app.development
+    environment:
+      - NODE_ENV=development
+    command: sh -c "npm install && npm run dev"
+
+volumes:
+  db-data: {}
+  app-node-modules: {}
