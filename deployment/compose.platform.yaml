@@ -1,0 +1,75 @@
+# compose.platform.yaml - Platform mode with Traefik routing
+#
+# Required: PROJECT_ID in .env.project
+# URLs:
+# - http://${PROJECT_ID}.preview.localhost  -> frontend
+# - http://${PROJECT_ID}.api.localhost      -> backend
+---
+services:
+  db:
+    image: postgres:17-alpine3.22
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    env_file:
+      - .env.backend.development
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    env_file:
+      - .env.backend.development
+    environment:
+      - PROJECT_ID=${PROJECT_ID}
+    volumes:
+      - ../backend:/api
+    command: sh -c "pip install -r requirements.txt && python manage.py runserver 0.0.0.0:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - default
+      - edge
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=edge"
+      - "traefik.http.routers.${PROJECT_ID}-api.rule=Host(`${PROJECT_ID}.api.localhost`)"
+      - "traefik.http.routers.${PROJECT_ID}-api.entrypoints=web"
+      - "traefik.http.services.${PROJECT_ID}-api.loadbalancer.server.port=8000"
+
+  app:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+      target: dev
+    volumes:
+      - ../frontend:/app
+      - app-node-modules:/app/node_modules
+    env_file:
+      - .env.frontend.development
+    environment:
+      - NODE_ENV=development
+      - NEXT_PUBLIC_API_URL=http://${PROJECT_ID}.api.localhost
+    command: sh -c "npm install && npm run dev -- --hostname 0.0.0.0 --port 3000"
+    networks:
+      - default
+      - edge
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=edge"
+      - "traefik.http.routers.${PROJECT_ID}-preview.rule=Host(`${PROJECT_ID}.preview.localhost`)"
+      - "traefik.http.routers.${PROJECT_ID}-preview.entrypoints=web"
+      - "traefik.http.services.${PROJECT_ID}-preview.loadbalancer.server.port=3000"
+
+volumes:
+  db-data: {}
+  app-node-modules: {}
+
+networks:
+  edge:
+    external: true

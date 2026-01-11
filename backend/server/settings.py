@@ -24,18 +24,31 @@ if not ENVIRONMENT:
 if ENVIRONMENT == "development":  # development environment (default)
     SECRET_KEY = os.getenv("SECRET_KEY")
     DEBUG = os.getenv("DEBUG", "False").lower() in ("true", "1")
-    ALLOWED_HOSTS = ["127.0.0.1", "localhost", "api", "host.docker.internal"]
+
+    # PROJECT_ID for Shippable platform integration, remove on standalone deployments
+    PROJECT_ID = os.getenv("PROJECT_ID", "")
+
+    ALLOWED_HOSTS = [
+        "127.0.0.1",
+        "localhost",
+        "api",
+        "host.docker.internal",
+        f"{PROJECT_ID}.api.localhost",
+    ]
     CORS_ALLOWED_ORIGINS = [
         "http://localhost",  # NOTE: important for parent apps to communicate with the app being built
         "http://127.0.0.1",  # NOTE: important for parent apps to communicate with the app being built
         "http://app",
         "http://localhost:3000",
         "http://127.0.0.1:3000",
+        f"http://{PROJECT_ID}.preview.localhost",
     ]
     CORS_ALLOW_ALL_ORIGINS = False
     CSRF_TRUSTED_ORIGINS = [
         "http://localhost",
         "http://127.0.0.1",
+        f"http://{PROJECT_ID}.api.localhost",
+        f"http://{PROJECT_ID}.preview.localhost",
     ]
 # add other environments here (e.g., production, staging) as needed
 else:
