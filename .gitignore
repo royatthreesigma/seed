@@ -2,3 +2,21 @@
 *.key
 *.pem
 *.env*
+
+# System files
+.DS_Store
+.idea/
+.vscode/
+
+# Python
+__pycache__/
+*.pyc
+.env
+
+# Node
+node_modules/
+.next/
+dist/
+
+# Docker
+*.log
