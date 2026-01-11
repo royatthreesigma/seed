@@ -26,7 +26,6 @@ services:
       - "8000:8000"
     volumes:
       - ../backend:/backend # Mount local code for live development changes
-      - /var/run/docker.sock:/var/run/docker.sock # Docker socket for container management
     # Install requirements on startup since volume mount replaces built-in packages
     command: sh -c "pip install -r requirements.txt && python manage.py runserver 0.0.0.0:8000"
     depends_on:
