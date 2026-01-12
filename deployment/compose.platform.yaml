@@ -18,6 +18,26 @@ services:
       timeout: 5s
       retries: 5
 
+  postgrest:
+    image: postgrest/postgrest:v14.3
+    env_file:
+      - .env.backend.development
+    environment:
+      - PGRST_DB_SCHEMAS=public,business
+      - PGRST_OPENAPI_SERVER_PROXY_URI=http://${PROJECT_ID}.rest.localhost
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - default
+      - edge
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=edge"
+      - "traefik.http.routers.${PROJECT_ID}-rest.rule=Host(`${PROJECT_ID}.rest.localhost`)"
+      - "traefik.http.routers.${PROJECT_ID}-rest.entrypoints=web"
+      - "traefik.http.services.${PROJECT_ID}-rest.loadbalancer.server.port=3000"
+
   api:
     build:
       context: ../backend

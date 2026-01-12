@@ -17,21 +17,8 @@ Including another URLconf
 
 from django.contrib import admin
 from django.urls import path, include
-from .views import AnonymousUserHealthCheckViewSet, AuthenticatedUserHealthCheckView
 
 urlpatterns = [
-    # path("admin/", admin.site.urls), # Uncomment to enable admin interface,
-    # disabled for reduced vulnerability surface area
-    # health check endpoint
-    path(
-        "reserved/health/",
-        AnonymousUserHealthCheckViewSet.as_view(),
-        name="health-check",
-    ),
-    path(
-        "reserved/authenticated-health/",
-        AuthenticatedUserHealthCheckView.as_view(),
-        name="authenticated-health-check",
-    ),
+    # path("admin/", admin.site.urls), # disabled for reduced vulnerability surface area, Uncomment to enable admin interface,
     path("api/", include("api.urls")),  # API endpoints
 ]

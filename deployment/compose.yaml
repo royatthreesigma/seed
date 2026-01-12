@@ -7,7 +7,7 @@ services:
     volumes:
       - db-data:/var/lib/postgresql/data
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT}:5432"
     env_file:
       - .env.backend.development
     healthcheck:
@@ -15,6 +15,19 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+
+  postgrest:
+    image: postgrest/postgrest:v14.3
+    container_name: postgrest
+    ports:
+      - "3001:3000"
+    env_file:
+      - .env.backend.development
+    environment:
+      - PGRST_DB_SCHEMAS=public,business
+    depends_on:
+      db:
+        condition: service_healthy
 
   api:
     build:
