@@ -1,5 +1,5 @@
 """
-URL configuration for server project.
+URL configuration for config project.
 
 The `urlpatterns` list routes URLs to views. For more information please see:
     https://docs.djangoproject.com/en/5.2/topics/http/urls/
@@ -16,9 +16,15 @@ Including another URLconf
 """
 
 from django.contrib import admin
-from django.urls import path, include
+from django.urls import path
+from .views import AnonymusUserHealthCheckViewSet, AuthenticatedUserHealthCheckView
 
 urlpatterns = [
-    # path("admin/", admin.site.urls), # disabled for reduced vulnerability surface area, Uncomment to enable admin interface,
-    path("api/", include("api.urls")),  # API endpoints
+    path("admin/", admin.site.urls),
+    path("health/", AnonymusUserHealthCheckViewSet.as_view(), name="health-check"),
+    path(
+        "authenticated-health/",
+        AuthenticatedUserHealthCheckView.as_view(),
+        name="authenticated-health-check",
+    ),
 ]

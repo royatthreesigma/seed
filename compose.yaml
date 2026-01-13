@@ -1,45 +1,29 @@
-# docker-compose.yaml for local and standalone development
 ---
 services:
   db:
     image: postgres:17-alpine3.22
-    container_name: db
     volumes:
       - db-data:/var/lib/postgresql/data
     ports:
-      - "${POSTGRES_PORT}:5432"
+      - "5432:5432"
     env_file:
-      - .env.backend.development
+      - .env
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
-  postgrest:
-    image: postgrest/postgrest:v14.3
-    container_name: postgrest
-    ports:
-      - "3001:3000"
-    env_file:
-      - .env.backend.development
-    environment:
-      - PGRST_DB_SCHEMAS=public,business
-    depends_on:
-      db:
-        condition: service_healthy
+      interval: 3s
+      timeout: 3s
+      retries: 3
 
   api:
     build:
-      context: ../backend
+      context: ./backend
       dockerfile: Dockerfile
-    container_name: api
     env_file:
-      - .env.backend.development
+      - .env
     ports:
       - "8000:8000"
     volumes:
-      - ../backend:/api # Mount local code for live development changes
+      - ./backend:/api # Mount local code for live development changes
     # Install requirements on startup since volume mount replaces built-in packages
     command: sh -c "pip install -r requirements.txt && python manage.py runserver 0.0.0.0:8000"
     depends_on:
@@ -48,17 +32,15 @@ services:
 
   app:
     build:
-      context: ../frontend
+      context: ./frontend
       dockerfile: Dockerfile
-      target: dev
-    container_name: app
     ports:
       - "3000:3000"
     volumes:
-      - ../frontend:/app # live-code mount for development
+      - ./frontend:/app # live-code mount for development
       - app-node-modules:/app/node_modules # preserve container's node_modules
     env_file:
-      - .env.frontend.development
+      - .env
     environment:
       - NODE_ENV=development
     command: sh -c "npm install && npm run dev"
