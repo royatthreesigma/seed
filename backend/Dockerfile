@@ -1,19 +1,27 @@
-FROM python:3.10-slim
+ARG PYTHON_VERSION=3.11-slim
 
-WORKDIR /api
-ENV PYTHONUNBUFFERED=1
+FROM python:${PYTHON_VERSION}
 
-# Copy requirements file and install dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir -v -r requirements.txt
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
 
-# Install gunicorn for production/staging deployments
-# RUN pip install gunicorn
+# install psycopg2 dependencies.
+RUN apt-get update && apt-get install -y \
+    libpq-dev \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
 
-# Copy the Django project code
-COPY . .
+RUN mkdir -p /code
+
+WORKDIR /code
+
+COPY requirements.txt /tmp/requirements.txt
+RUN set -ex && \
+    pip install --upgrade pip && \
+    pip install -r /tmp/requirements.txt && \
+    rm -rf /root/.cache/
+COPY . /code
 
 EXPOSE 8000
 
-# Command to run the Django development server - for production, use gunicorn instead
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+CMD ["python","manage.py","runserver","0.0.0.0:8000"]
