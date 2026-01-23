@@ -5,8 +5,9 @@ services:
     container_name: db
     volumes:
       - db-data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
+    # don't expose DB to the internet, backend connects via internal network
+    # DO_NOT_UNCOMMENT ports:
+      # DO_NOT_UNCOMMENT - "5432:5432"
     env_file:
       - .env
     healthcheck:
