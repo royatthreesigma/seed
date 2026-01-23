@@ -83,4 +83,4 @@ volumes:
 
 networks:
   edge:
-    external: true
+    driver: bridge
