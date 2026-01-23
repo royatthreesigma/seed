@@ -2,6 +2,7 @@
 services:
   db:
     image: postgres:17-alpine3.22
+    container_name: db
     volumes:
       - db-data:/var/lib/postgresql/data
     ports:
@@ -10,41 +11,76 @@ services:
       - .env
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 3s
-      timeout: 3s
-      retries: 3
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - edge
 
-  api:
+  backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
+    container_name: backend
     env_file:
       - .env
     ports:
       - "8000:8000"
     volumes:
-      - ./backend:/api # Mount local code for live development changes
+      - ./backend:/backend # Mount local code for live development changes
     # Install requirements on startup since volume mount replaces built-in packages
     command: sh -c "pip install -r requirements.txt && python manage.py runserver 0.0.0.0:8000"
     depends_on:
       db:
         condition: service_healthy
+    networks:
+      - edge
 
-  app:
+  frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      target: dev
+    container_name: frontend
     ports:
       - "3000:3000"
     volumes:
-      - ./frontend:/app # live-code mount for development
-      - app-node-modules:/app/node_modules # preserve container's node_modules
+      - ./frontend:/frontend # live-code mount for development
+      - frontend-node-modules:/frontend/node_modules # preserve container's node_modules
     env_file:
       - .env
     environment:
       - NODE_ENV=development
     command: sh -c "npm install && npm run dev"
+    networks:
+      - edge
+
+  shpbl:
+    build:
+      context: ./shpbl
+      dockerfile: Dockerfile
+    container_name: shpbl
+    env_file:
+      - .env
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./shpbl:/shpbl # Mount code for development
+      - /var/run/docker.sock:/var/run/docker.sock # Docker SDK access
+    depends_on:
+      db:
+        condition: service_healthy
+      backend:
+        condition: service_started
+      frontend:
+        condition: service_started
+    networks:
+      - edge
 
 volumes:
   db-data: {}
-  app-node-modules: {}
+  frontend-node-modules: {}
+
+networks:
+  edge:
+    external: true
