@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { DefaultAppSidebar } from "@/components/sidebar/default/app-sidebar";
 
 const geistSans = Geist({
 	variable: "--font-geist-sans",
@@ -29,7 +31,12 @@ export default function RootLayout({
 				className={`${geistSans.variable} ${geistMono.variable} antialiased h-screen flex flex-col overflow-hidden`}
 				// `h-screen flex flex-col overflow-hidden` is to ensure full height for the layout and allow childrend to manage their own scrolling
 			>
-				<div className="flex-1 min-h-0 min-w-0">{children}</div>
+				<main className="flex-1 min-h-0 min-w-0">
+					<SidebarProvider>
+						<DefaultAppSidebar />
+						<SidebarInset>{children}</SidebarInset>
+					</SidebarProvider>
+				</main>
 				<Toaster position="bottom-right" />
 			</body>
 		</html>
