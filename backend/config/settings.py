@@ -149,3 +149,10 @@ STATIC_URL = "static/"
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+REST_FRAMEWORK = {
+    # Uncomment this to enable Clerk authentication
+    # "DEFAULT_AUTHENTICATION_CLASSES": [
+        # "config.clerk_auth.ClerkAuthentication",  
+    # ],
+}
