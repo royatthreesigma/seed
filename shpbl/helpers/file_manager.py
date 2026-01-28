@@ -17,10 +17,13 @@ def read_file(
     end_line: int,
     include_line_numbers: bool = True,
 ) -> str:
+    """
     # NOTE:
-    # if end_line < start_line, returns only end line
-    # if end_line > max lines, returns up to max lines
-    # if end_line < 1, returns from start line to end of file
+    returns raw file content (a string with actual \t tabs and \n newlines)
+    - if end_line < start_line, returns only end line
+    - if end_line > max lines, returns up to max lines
+    - if end_line < 1, returns from start line to end of file
+    """
     start_line = max(1, start_line)
     if end_line < 1:
         end_line = "$"  # sed syntax for end of file

@@ -3,7 +3,7 @@ from pydantic import BaseModel, Field
 from typing import Optional, Literal, Dict, Any, List
 
 # Type aliases
-ContainerName = Literal["backend", "frontend"]
+ContainerName = Literal["backend", "frontend", "db"]
 
 
 class SearchCandidateRequest(BaseModel):
@@ -67,7 +67,20 @@ class ShpblResponse(BaseModel):
     stderr: Optional[str] = None
     exit_code: Optional[int] = None
 
+    # HACK: for use when we want to bypass parsing at any place in the pipeline
+    # useful when string matching is needed for LLMs
+    internal_do_not_parse__: bool = False
+    unparsed_str_response__: Optional[str] = None
+
 
 class DjangoAppRequest(BaseModel):
     app_name: str
     base_url: Optional[str] = None
+
+
+class RunCommandRequest(BaseModel):
+    """Request model for running raw commands in a container"""
+
+    container_name: ContainerName = Field(..., description="Name of the container to run the command in")
+    command: str = Field(..., description="Raw shell command to execute")
+    workdir: Optional[str] = Field(None, description="Working directory (defaults to container-specific dir)")

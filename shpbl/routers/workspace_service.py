@@ -19,8 +19,10 @@ from models import (
     ReadFileRequest,
     ShpblResponse,
     ContainerName,
+    RunCommandRequest,
 )
 from interface import CreateOrOverwriteFile, DeleteFile, ReplaceStringInFile  # type: ignore
+from container import exec_in_container
 
 
 router = APIRouter(prefix="/workspace", tags=["workspace"])
@@ -71,6 +73,8 @@ async def search_workspace(request: SearchRequest):
             search_run = search_run[: request.max_results]
             is_pruned = True
 
+        # Join results for unparsed response (preserves exact whitespace)
+        unparsed_content = "\n---\n".join(search_run) if search_run else ""
         return ShpblResponse(
             message="Search completed" + (" (results pruned)" if is_pruned else ""),
             success=True,
@@ -79,6 +83,8 @@ async def search_workspace(request: SearchRequest):
                 "pruned": is_pruned,
             },
             stderr="; ".join(_errors) if _errors else None,
+            internal_do_not_parse__=True,
+            unparsed_str_response__=unparsed_content,
         )
     except Exception as e:
         return ShpblResponse(
@@ -110,6 +116,8 @@ async def read_file_workspace(request: ReadFileRequest):
             success=True,
             message="File read successfully",
             data={"file_content": file_content},
+            internal_do_not_parse__=True,
+            unparsed_str_response__=file_content,
         )
     except Exception as e:
         return ShpblResponse(
@@ -235,4 +243,31 @@ async def replace_string_in_file_workspace(request: ReplaceStringInFile):
             success=False,
             message=f"Failed to read file: {str(e)}",
             data={"error": str(e)},
+        )
+
+
+@router.post("/run-command", response_model=ShpblResponse)
+async def run_command_in_container(request: RunCommandRequest):
+    """
+    Execute a raw shell command in the specified container.
+
+    Args:
+        request: RunCommandRequest with container_name, command, and optional workdir
+
+    Returns:
+        ShpblResponse with success status, stdout, stderr, and exit_code
+    """
+    try:
+        result = exec_in_container(
+            container_name=request.container_name,
+            command=request.command,
+            workdir=request.workdir,
+        )
+        return result
+    except Exception as e:
+        return ShpblResponse(
+            success=False,
+            message=f"Failed to execute command: {str(e)}",
+            data={"error": str(e)},
+            stderr=str(e),
         )

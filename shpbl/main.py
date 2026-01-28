@@ -16,7 +16,7 @@ from typing import Dict, Any
 from container import exec_in_container
 from helpers.file_scripts import GET_FILE_LIST_NODE, GET_FILE_LIST_PYTHON
 from helpers.helpers import DIRECTORIES_TO_EXCLUDE, FILES_TO_EXCLUDE
-from routers import api_service, app_service, workspace_service  # type: ignore
+from routers import api_service, app_service, workspace_service, db_service  # type: ignore
 from interface import HealthCheckResponse, ServiceCheck  # type: ignore
 from models import ContainerName, ShpblResponse  # type: ignore
 
@@ -40,6 +40,7 @@ app = FastAPI(
 app.include_router(api_service.router)
 app.include_router(app_service.router)
 app.include_router(workspace_service.router)
+app.include_router(db_service.router)
 
 
 @app.get("/")

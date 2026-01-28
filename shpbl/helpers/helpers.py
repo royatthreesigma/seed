@@ -28,10 +28,14 @@ DIRECTORIES_TO_EXCLUDE = {
     ".next",
     "node_modules",
     ".mypy",
+    ".mypy_cache",
     "mypy_cache",
     "venv",
     ".venv",
     "__pycache__",
+    ".pytest_cache",
+    "__pypackages__",
+    ".ruff_cache",
 }
 
 FILES_TO_EXCLUDE = {
