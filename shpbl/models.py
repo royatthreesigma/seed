@@ -48,6 +48,9 @@ class ReadFileRequest(BaseModel):
 
 
 class ContainerLogsRequest(BaseModel):
+    container_name: ContainerName = Field(
+        ..., description="Name of the container to get logs from"
+    )
     num_lines: int = Field(
         default=20,
         ge=1,
@@ -81,6 +84,7 @@ class DjangoAppRequest(BaseModel):
 class RunCommandRequest(BaseModel):
     """Request model for running raw commands in a container"""
 
-    container_name: ContainerName = Field(..., description="Name of the container to run the command in")
+    container_name: ContainerName = Field(
+        ..., description="Name of the container to run the command in"
+    )
     command: str = Field(..., description="Raw shell command to execute")
-    workdir: Optional[str] = Field(None, description="Working directory (defaults to container-specific dir)")
