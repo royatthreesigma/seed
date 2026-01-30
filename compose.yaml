@@ -1,10 +1,12 @@
+# Docker Compose configuration for DigitalOcean deployment with development settings
+# git clone and run compose from the mnt/pr_data directory to ensure volume mounts work correctly
 ---
 services:
   db:
     image: postgres:17-alpine3.22
     container_name: db
     volumes:
-      - db-data:/var/lib/postgresql/data
+      - /mnt/pr_data/db-data:/var/lib/postgresql/data # mount inside /mnt (DigitalOcean volume)
     # don't expose DB to the internet, backend connects via internal network
     # DO_NOT_UNCOMMENT ports:
       # DO_NOT_UNCOMMENT - "5432:5432"
@@ -47,7 +49,7 @@ services:
       - "3000:3000"
     volumes:
       - ./frontend:/frontend # live-code mount for development
-      - frontend-node-modules:/frontend/node_modules # preserve container's node_modules
+      - /mnt/pr_data/node_modules:/frontend/node_modules # persist node_modules on DigitalOcean volume
     env_file:
       - .env
     environment:
@@ -79,10 +81,6 @@ services:
     networks:
       - edge
     command: sh -c "pip install -r requirements.txt && uvicorn main:app --host 0.0.0.0 --port 8001 --reload"
-
-volumes:
-  db-data: {}
-  frontend-node-modules: {}
 
 networks:
   edge:
