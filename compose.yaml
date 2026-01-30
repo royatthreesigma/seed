@@ -11,7 +11,7 @@ services:
     env_file:
       - .env
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -66,6 +66,7 @@ services:
     ports:
       - "8001:8001"
     volumes:
+      - .:/workspace # Mount entire workspace for download endpoint
       - ./shpbl:/shpbl # Mount code for development
       - /var/run/docker.sock:/var/run/docker.sock # Docker SDK access
     depends_on:

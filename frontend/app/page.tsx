@@ -26,7 +26,7 @@ export default function Home() {
 						<Globe className="size-4" />
 						shippable.build
 					</a>
-					<a href="https://discord.gg/shippable" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:scale-105 transition-transform">
+					<a href="https://discord.gg/WdgtG5QHWe" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:scale-105 transition-transform">
 						<DiscordLogoIcon className="size-4" />
 						Discord
 					</a>

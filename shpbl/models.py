@@ -88,3 +88,10 @@ class RunCommandRequest(BaseModel):
         ..., description="Name of the container to run the command in"
     )
     command: str = Field(..., description="Raw shell command to execute")
+
+
+class UpdateEnvVariableRequest(BaseModel):
+    """Request model for updating or creating environment variables"""
+
+    variable_name: str = Field(..., description="Name of the environment variable")
+    value: str = Field(..., description="Value of the environment variable")

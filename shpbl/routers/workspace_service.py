@@ -21,6 +21,7 @@ from models import (
     ContainerName,
     RunCommandRequest,
     ContainerLogsRequest,
+    UpdateEnvVariableRequest,
 )
 from interface import CreateOrOverwriteFile, DeleteFile, ReplaceStringInFile  # type: ignore
 from container import exec_in_container
@@ -260,8 +261,7 @@ async def run_command_in_container(request: RunCommandRequest):
     """
     try:
         result = exec_in_container(
-            container_name=request.container_name,
-            command=request.command
+            container_name=request.container_name, command=request.command
         )
         return result
     except Exception as e:
@@ -315,5 +315,118 @@ async def get_terminal_logs(request: ContainerLogsRequest):
         return ShpblResponse(
             success=False,
             message=f"Failed to retrieve container logs: {str(e)}",
+            data={"error": str(e)},
+        )
+
+
+@router.get("/env-variables", response_model=ShpblResponse)
+async def get_env_variable_names():
+    """
+    Get a list of environment variable names from the .env file.
+    Does not return values, only variable names.
+
+    Returns:
+        ShpblResponse with list of environment variable names
+    """
+    try:
+        env_file_path = "/workspace/.env"
+
+        if not os.path.exists(env_file_path):
+            return ShpblResponse(
+                success=False,
+                message=".env file not found",
+                data={"error": ".env file not found"},
+            )
+
+        with open(env_file_path, "r") as f:
+            lines = f.readlines()
+
+        variable_names = []
+        for line in lines:
+            line = line.strip()
+            # Skip empty lines and comments
+            if line and not line.startswith("#"):
+                # Extract variable name (before '=')
+                if "=" in line:
+                    var_name = line.split("=", 1)[0].strip()
+                    variable_names.append(var_name)
+
+        return ShpblResponse(
+            success=True,
+            message=f"Found {len(variable_names)} environment variables",
+            data={"variable_names": variable_names, "count": len(variable_names)},
+        )
+    except Exception as e:
+        return ShpblResponse(
+            success=False,
+            message=f"Failed to read .env file: {str(e)}",
+            data={"error": str(e)},
+        )
+
+
+@router.post("/env-variables", response_model=ShpblResponse)
+async def update_env_variable(request: UpdateEnvVariableRequest):
+    """
+    Update or create an environment variable in the .env file.
+    If the variable exists, it will be updated. If not, it will be added.
+
+    Args:
+        request: UpdateEnvVariableRequest with variable_name and value
+
+    Returns:
+        ShpblResponse with status of the operation
+    """
+    try:
+        env_file_path = "/workspace/.env"
+
+        # Read existing content
+        if os.path.exists(env_file_path):
+            with open(env_file_path, "r") as f:
+                lines = f.readlines()
+        else:
+            lines = []
+
+        # Find and update existing variable or add new one
+        variable_found = False
+        new_lines = []
+
+        for line in lines:
+            stripped = line.strip()
+            # Check if this line contains our variable
+            if stripped and not stripped.startswith("#") and "=" in stripped:
+                var_name = stripped.split("=", 1)[0].strip()
+                if var_name == request.variable_name:
+                    # Update existing variable
+                    new_lines.append(f"{request.variable_name}={request.value}\n")
+                    variable_found = True
+                else:
+                    new_lines.append(line)
+            else:
+                # Keep comments and empty lines as-is
+                new_lines.append(line)
+
+        # If variable wasn't found, add it at the end
+        if not variable_found:
+            # Add newline before if file doesn't end with one
+            if new_lines and not new_lines[-1].endswith("\n"):
+                new_lines[-1] += "\n"
+            new_lines.append(f"{request.variable_name}={request.value}\n")
+
+        # Write back to file
+        with open(env_file_path, "w") as f:
+            f.writelines(new_lines)
+
+        return ShpblResponse(
+            success=True,
+            message=f"Environment variable '{request.variable_name}' {'updated' if variable_found else 'created'} successfully",
+            data={
+                "variable_name": request.variable_name,
+                "status": "updated" if variable_found else "created",
+            },
+        )
+    except Exception as e:
+        return ShpblResponse(
+            success=False,
+            message=f"Failed to update .env file: {str(e)}",
             data={"error": str(e)},
         )
