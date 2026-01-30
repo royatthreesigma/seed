@@ -1,6 +1,6 @@
 FROM python:3.11-alpine
 
-WORKDIR /api
+WORKDIR /backend
 ENV PYTHONUNBUFFERED=1
 
 # Copy requirements file and install dependencies
