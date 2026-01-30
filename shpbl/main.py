@@ -480,20 +480,23 @@ async def get_workspace_filetree():
 async def get_routes():
     # use "python manage.py show_urls" for the backend to get all routes
     # use "find app -name 'page.*'" for the frontend to get all routes
-    backend_cmd = "python manage.py show_urls --format=json"
+    backend_cmd = "python manage.py show_urls"
     frontend_cmd = "find app -name 'page.*'"
     combined_data = {}
     errors = []
+
     # Backend routes
     backend_result = exec_in_container("backend", backend_cmd)
     if backend_result.success:
         try:
-            backend_routes = json.loads(backend_result.stdout)
-            combined_data["backend"] = backend_routes
+            combined_data["backend"] = backend_result.stdout.splitlines()
         except json.JSONDecodeError as e:
-            errors.append(f"backend: Failed to parse JSON - {str(e)}")
+            errors.append(
+                f"backend: Failed to parse JSON - {backend_result.model_dump_json()}"
+            )
     else:
         errors.append(f"backend: {backend_result.stderr or 'Command failed'}")
+
     # Frontend routes
     frontend_result = exec_in_container("frontend", frontend_cmd)
     if frontend_result.success:
@@ -564,20 +567,26 @@ async def download_workspace_zip():
 
                     # Special handling for compose.yaml: remove shpbl service
                     if file == "compose.yaml":
-                        with open(file_path, 'r') as f:
+                        with open(file_path, "r") as f:
                             compose_data = yaml.safe_load(f)
-                        
+
                         # Remove shpbl service
-                        if compose_data and 'services' in compose_data and 'shpbl' in compose_data['services']:
-                            del compose_data['services']['shpbl']
-                        
+                        if (
+                            compose_data
+                            and "services" in compose_data
+                            and "shpbl" in compose_data["services"]
+                        ):
+                            del compose_data["services"]["shpbl"]
+
                         # Write modified compose.yaml to zip
-                        modified_content = yaml.dump(compose_data, default_flow_style=False, sort_keys=False)
+                        modified_content = yaml.dump(
+                            compose_data, default_flow_style=False, sort_keys=False
+                        )
                         zipf.writestr(str(arcname), modified_content)
                     else:
                         # Regular files: add as-is
                         zipf.write(file_path, arcname)
-        
+
         return Response(
             content=buffer.getvalue(),
             media_type="application/zip",

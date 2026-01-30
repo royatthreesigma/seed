@@ -52,6 +52,8 @@ INSTALLED_APPS = [
     "rest_framework",
     # OWASP
     "corsheaders",
+    # utilities
+    "django_extensions",
     # Django default apps
     "django.contrib.admin",
     "django.contrib.auth",
@@ -153,6 +155,6 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 REST_FRAMEWORK = {
     # Uncomment this to enable Clerk authentication
     # "DEFAULT_AUTHENTICATION_CLASSES": [
-        # "config.clerk_auth.ClerkAuthentication",  
+    # "config.clerk_auth.ClerkAuthentication",
     # ],
 }
