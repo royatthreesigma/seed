@@ -5,9 +5,8 @@ set -euo pipefail
 exec > >(tee -a /var/log/startup-script.log) 2>&1
 echo "=== boot_script started: $(date -Is) ==="
 
-MOUNT_DIR="${MOUNT_DIR:-/mnt/data}"
-REPO_DIR="${MOUNT_DIR}/code"
-APP_DIR="${REPO_DIR}"
+MOUNT_DIR="${MOUNT_DIR:-/mnt}"
+APP_DIR="${MOUNT_DIR}/code"
 
 # Store env in a persistent, non-git-tracked location on the volume
 ENV_DIR="${MOUNT_DIR}/config"
@@ -25,10 +24,10 @@ rand_str() {
   fi
 }
 
-# Ensure app dir exists (user_data already cloned the repo here)
+# Verify app dir exists (should be cloned by user_data)
 if [ ! -d "$APP_DIR" ]; then
-  echo "ERROR: expected app dir not found: $APP_DIR"
-  ls -la "$REPO_DIR" || true
+  echo "ERROR: App dir not found at $APP_DIR"
+  echo "The repo should be cloned by user_data before this script runs."
   exit 1
 fi
 
