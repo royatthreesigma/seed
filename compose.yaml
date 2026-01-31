@@ -6,10 +6,10 @@ services:
     image: postgres:17-alpine3.22
     container_name: db
     volumes:
-      - /mnt/pr_data/db-data:/var/lib/postgresql/data # mount inside /mnt (DigitalOcean volume)
+      - /mnt/db-data:/var/lib/postgresql/data # mount inside /mnt (DigitalOcean volume)
     # don't expose DB to the internet, backend connects via internal network
     # DO_NOT_UNCOMMENT ports:
-      # DO_NOT_UNCOMMENT - "5432:5432"
+    # DO_NOT_UNCOMMENT - "5432:5432"
     env_file:
       - .env
     healthcheck:
@@ -49,7 +49,7 @@ services:
       - "3000:3000"
     volumes:
       - ./frontend:/frontend # live-code mount for development
-      - /mnt/pr_data/node_modules:/frontend/node_modules # persist node_modules on DigitalOcean volume
+      - /mnt/node_modules:/frontend/node_modules # persist node_modules on DigitalOcean volume
     env_file:
       - .env
     environment:
