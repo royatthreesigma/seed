@@ -5,8 +5,7 @@ set -euo pipefail
 exec > >(tee -a /var/log/startup-script.log) 2>&1
 echo "=== boot_script started: $(date -Is) ==="
 
-MOUNT_DIR="/mnt/pr_data"
-REPO_URL="https://github.com/royatthreesigma/seed.git"
+MOUNT_DIR="${MOUNT_DIR}"
 REPO_DIR="${MOUNT_DIR}/code"
 APP_DIR="${REPO_DIR}"
 
