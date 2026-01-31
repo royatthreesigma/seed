@@ -5,7 +5,7 @@ set -euo pipefail
 exec > >(tee -a /var/log/startup-script.log) 2>&1
 echo "=== boot_script started: $(date -Is) ==="
 
-MOUNT_DIR="${MOUNT_DIR}"
+MOUNT_DIR="${MOUNT_DIR:-/mnt/data}"
 REPO_DIR="${MOUNT_DIR}/code"
 APP_DIR="${REPO_DIR}"
 
@@ -25,22 +25,7 @@ rand_str() {
   fi
 }
 
-# Wait for volume/dir
-while [ ! -d "$MOUNT_DIR" ]; do
-  echo "Waiting for $MOUNT_DIR..."
-  sleep 5
-done
-
-# Clone repo once
-if [ ! -d "$REPO_DIR" ]; then
-  echo "Fresh start - cloning repo..."
-  cd "$MOUNT_DIR"
-  git clone "$REPO_URL" "code"
-else
-  echo "Repo already present at $REPO_DIR"
-fi
-
-# Ensure app dir exists
+# Ensure app dir exists (user_data already cloned the repo here)
 if [ ! -d "$APP_DIR" ]; then
   echo "ERROR: expected app dir not found: $APP_DIR"
   ls -la "$REPO_DIR" || true
