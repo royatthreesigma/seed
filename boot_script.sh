@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Log everything
 exec > >(tee -a /var/log/startup-script.log) 2>&1
 echo "=== boot_script started: $(date -Is) ==="
 
@@ -18,14 +17,11 @@ rand_str() {
   fi
 }
 
-# Verify app dir exists (should be cloned by user_data)
 if [ ! -d "$APP_DIR" ]; then
   echo "ERROR: App dir not found at $APP_DIR"
-  echo "The repo should be cloned by user_data before this script runs."
   exit 1
 fi
 
-# Create env ONCE, preserve on subsequent boots to keep DB credentials
 if [ -f "$ENV_FILE" ]; then
   echo "Reusing existing .env file (preserving credentials)"
 else
@@ -49,9 +45,7 @@ fi
 cd "$APP_DIR"
 
 # === SSL CERTIFICATE SETUP ===
-# Issue cert on first boot, reuse on subsequent boots
 SSL_DIR="${APP_DIR}/nginx/ssl"
-ACME_DIR="${APP_DIR}/acme"
 PUBLIC_IP=$(hostname -I | awk '{print $1}')
 
 echo "Droplet IP: $PUBLIC_IP"
@@ -62,25 +56,23 @@ else
   echo "Issuing SSL certificate for $PUBLIC_IP..."
   mkdir -p "$SSL_DIR"
 
-  # Issue cert (requires port 80 to be free - run before docker compose up)
+  # Issue cert AND output directly to ssl dir in one command
   docker run --rm --net=host \
-    -v "${ACME_DIR}:/acme" \
     -v "${SSL_DIR}:/ssl" \
     neilpang/acme.sh \
-    acme.sh --issue --server letsencrypt --cert-profile shortlived --standalone -d "$PUBLIC_IP" --home /acme
+    sh -c "acme.sh --issue --server letsencrypt --cert-profile shortlived --standalone -d $PUBLIC_IP --home /acme && \
+           cp /acme/${PUBLIC_IP}_ecc/fullchain.cer /ssl/fullchain.pem && \
+           cp /acme/${PUBLIC_IP}_ecc/${PUBLIC_IP}.key /ssl/privkey.pem && \
+           chmod 600 /ssl/privkey.pem"
 
-  # Install cert (copy to nginx ssl dir)
-  docker run --rm \
-    -v "${ACME_DIR}:/acme" \
-    -v "${SSL_DIR}:/ssl" \
-    neilpang/acme.sh \
-    acme.sh --install-cert -d "$PUBLIC_IP" --ecc --home /acme \
-    --key-file /ssl/privkey.pem --fullchain-file /ssl/fullchain.pem
-
-  echo "SSL certificate issued successfully"
+  if [ -f "${SSL_DIR}/fullchain.pem" ]; then
+    echo "SSL certificate issued successfully"
+  else
+    echo "ERROR: SSL certificate issuance failed"
+    exit 1
+  fi
 fi
 
 # Start services
 docker compose up -d
-
 echo "=== Startup complete: $(date -Is) ==="
