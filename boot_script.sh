@@ -46,8 +46,41 @@ EOF
   chmod 600 "$ENV_FILE"
 fi
 
-# Start services
 cd "$APP_DIR"
+
+# === SSL CERTIFICATE SETUP ===
+# Issue cert on first boot, reuse on subsequent boots
+SSL_DIR="${APP_DIR}/nginx/ssl"
+ACME_DIR="${APP_DIR}/acme"
+PUBLIC_IP=$(hostname -I | awk '{print $1}')
+
+echo "Droplet IP: $PUBLIC_IP"
+
+if [ -f "${SSL_DIR}/fullchain.pem" ] && [ -f "${SSL_DIR}/privkey.pem" ]; then
+  echo "SSL certs already exist, skipping issuance"
+else
+  echo "Issuing SSL certificate for $PUBLIC_IP..."
+  mkdir -p "$SSL_DIR"
+
+  # Issue cert (requires port 80 to be free - run before docker compose up)
+  docker run --rm --net=host \
+    -v "${ACME_DIR}:/acme" \
+    -v "${SSL_DIR}:/ssl" \
+    neilpang/acme.sh \
+    acme.sh --issue --server letsencrypt --cert-profile shortlived --standalone -d "$PUBLIC_IP" --home /acme
+
+  # Install cert (copy to nginx ssl dir)
+  docker run --rm \
+    -v "${ACME_DIR}:/acme" \
+    -v "${SSL_DIR}:/ssl" \
+    neilpang/acme.sh \
+    acme.sh --install-cert -d "$PUBLIC_IP" --ecc --home /acme \
+    --key-file /ssl/privkey.pem --fullchain-file /ssl/fullchain.pem
+
+  echo "SSL certificate issued successfully"
+fi
+
+# Start services
 docker compose up -d
 
 echo "=== Startup complete: $(date -Is) ==="

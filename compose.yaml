@@ -1,15 +1,28 @@
-# Docker Compose configuration for DigitalOcean deployment with development settings
-# git clone and run compose from the mnt/pr_data directory to ensure volume mounts work correctly
+# Docker Compose configuration for DigitalOcean deployment with HTTPS
 ---
 services:
+  proxy:
+    image: nginx:1.25-alpine
+    container_name: proxy
+    restart: unless-stopped
+    ports:
+      - "80:80"       # For ACME validation
+      - "3000:3000"   # HTTPS frontend
+      - "8001:8001"   # HTTPS API
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - frontend
+      - shpbl
+    networks:
+      - edge
+
   db:
     image: postgres:17-alpine3.22
     container_name: db
     volumes:
-      - /mnt/db-data:/var/lib/postgresql/data # mount inside /mnt (DigitalOcean volume)
-    # don't expose DB to the internet, backend connects via internal network
-    # DO_NOT_UNCOMMENT ports:
-    # DO_NOT_UNCOMMENT - "5432:5432"
+      - /mnt/db-data:/var/lib/postgresql/data
     env_file:
       - .env
     healthcheck:
@@ -27,11 +40,10 @@ services:
     container_name: backend
     env_file:
       - .env
-    ports:
-      - "8000:8000"
+    expose:
+      - "8000"    # Internal only, accessed by shpbl/frontend
     volumes:
-      - ./backend:/backend # Mount local code for live development changes
-    # Install requirements on startup since volume mount replaces built-in packages
+      - ./backend:/backend
     command: sh -c "pip install -r requirements.txt && python manage.py runserver 0.0.0.0:8000"
     depends_on:
       db:
@@ -45,11 +57,11 @@ services:
       dockerfile: Dockerfile
       target: dev
     container_name: frontend
-    ports:
-      - "3000:3000"
+    expose:
+      - "3000"    # Internal only, proxy handles public access
     volumes:
-      - ./frontend:/frontend # live-code mount for development
-      - /mnt/node_modules:/frontend/node_modules # persist node_modules on DigitalOcean volume
+      - ./frontend:/frontend
+      - /mnt/node_modules:/frontend/node_modules
     env_file:
       - .env
     environment:
@@ -65,12 +77,12 @@ services:
     container_name: shpbl
     env_file:
       - .env
-    ports:
-      - "8001:8001"
+    expose:
+      - "8001"    # Internal only, proxy handles public access
     volumes:
-      - .:/workspace # Mount entire workspace for download endpoint
-      - ./shpbl:/shpbl # Mount code for development
-      - /var/run/docker.sock:/var/run/docker.sock # Docker SDK access
+      - .:/workspace
+      - ./shpbl:/shpbl
+      - /var/run/docker.sock:/var/run/docker.sock
     depends_on:
       db:
         condition: service_healthy
