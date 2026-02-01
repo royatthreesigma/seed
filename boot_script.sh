@@ -26,7 +26,7 @@ if [ -f "$ENV_FILE" ]; then
   echo "Reusing existing .env file (preserving credentials)"
 else
   echo "No .env found. Generating new credentials..."
-  cat > "$ENV_FILE" <<EOF
+  cat > "$ENV_FILE" <<ENVEOF
 ENVIRONMENT=development
 POSTGRES_DB=db_$(rand_str 10)
 POSTGRES_PASSWORD=$(rand_str 16)
@@ -38,7 +38,7 @@ SECRET_KEY=$(rand_str 32)
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=your_clerk_key_here
 CLERK_SECRET_KEY=your_clerk_secret_here
 RESEND_API_KEY=your_resend_api_key_here
-EOF
+ENVEOF
   chmod 600 "$ENV_FILE"
 fi
 
@@ -56,13 +56,13 @@ else
   echo "Issuing SSL certificate for $PUBLIC_IP..."
   mkdir -p "$SSL_DIR"
 
-  # Issue cert AND output directly to ssl dir in one command
+  # Issue cert and copy to ssl dir - use default acme.sh home
   docker run --rm --net=host \
     -v "${SSL_DIR}:/ssl" \
     neilpang/acme.sh \
-    sh -c "acme.sh --issue --server letsencrypt --cert-profile shortlived --standalone -d $PUBLIC_IP --home /acme && \
-           cp /acme/${PUBLIC_IP}_ecc/fullchain.cer /ssl/fullchain.pem && \
-           cp /acme/${PUBLIC_IP}_ecc/${PUBLIC_IP}.key /ssl/privkey.pem && \
+    sh -c "acme.sh --issue --server letsencrypt --cert-profile shortlived --standalone -d $PUBLIC_IP && \
+           cp /acme.sh/${PUBLIC_IP}_ecc/fullchain.cer /ssl/fullchain.pem && \
+           cp /acme.sh/${PUBLIC_IP}_ecc/${PUBLIC_IP}.key /ssl/privkey.pem && \
            chmod 600 /ssl/privkey.pem"
 
   if [ -f "${SSL_DIR}/fullchain.pem" ]; then
@@ -73,6 +73,11 @@ else
   fi
 fi
 
+# Also allow 3000 and 8001 through firewall
+ufw allow 3000/tcp >/dev/null 2>&1 || true
+ufw allow 8001/tcp >/dev/null 2>&1 || true
+
 # Start services
 docker compose up -d
+
 echo "=== Startup complete: $(date -Is) ==="
