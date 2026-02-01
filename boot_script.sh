@@ -22,8 +22,19 @@ if [ ! -d "$APP_DIR" ]; then
   exit 1
 fi
 
+# Get public IP early (needed for .env generation)
+PUBLIC_IP=$(hostname -I | awk '{print $1}')
+echo "Droplet IP: $PUBLIC_IP"
+
 if [ -f "$ENV_FILE" ]; then
   echo "Reusing existing .env file (preserving credentials)"
+  # Update API URL in case IP changed
+  if grep -q "^NEXT_PUBLIC_API_URL=" "$ENV_FILE"; then
+    sed -i "s|^NEXT_PUBLIC_API_URL=.*|NEXT_PUBLIC_API_URL=https://${PUBLIC_IP}:8000|" "$ENV_FILE"
+    echo "Updated NEXT_PUBLIC_API_URL to https://${PUBLIC_IP}:8000"
+  else
+    echo "NEXT_PUBLIC_API_URL=https://${PUBLIC_IP}:8000" >> "$ENV_FILE"
+  fi
 else
   echo "No .env found. Generating new credentials..."
   cat > "$ENV_FILE" <<ENVEOF
@@ -36,6 +47,7 @@ POSTGRES_PORT=5432
 DEBUG=true
 SECRET_KEY=$(rand_str 32)
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=your_clerk_key_here
+NEXT_PUBLIC_API_URL=https://${PUBLIC_IP:-localhost}:8000
 CLERK_SECRET_KEY=your_clerk_secret_here
 RESEND_API_KEY=your_resend_api_key_here
 ENVEOF
@@ -46,9 +58,6 @@ cd "$APP_DIR"
 
 # === SSL CERTIFICATE SETUP ===
 SSL_DIR="${APP_DIR}/nginx/ssl"
-PUBLIC_IP=$(hostname -I | awk '{print $1}')
-
-echo "Droplet IP: $PUBLIC_IP"
 
 if [ -f "${SSL_DIR}/fullchain.pem" ] && [ -f "${SSL_DIR}/privkey.pem" ]; then
   echo "SSL certs already exist, skipping issuance"
