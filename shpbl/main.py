@@ -570,13 +570,12 @@ async def download_workspace_zip():
                         with open(file_path, "r") as f:
                             compose_data = yaml.safe_load(f)
 
-                        # Remove shpbl service
-                        if (
-                            compose_data
-                            and "services" in compose_data
-                            and "shpbl" in compose_data["services"]
-                        ):
-                            del compose_data["services"]["shpbl"]
+                        # Remove orchestration services
+                        if compose_data and "services" in compose_data:
+                            if "shpbl" in compose_data["services"]:
+                                del compose_data["services"]["shpbl"]
+                            if "proxy" in compose_data["services"]:
+                                del compose_data["services"]["proxy"]
 
                         # Write modified compose.yaml to zip
                         modified_content = yaml.dump(
