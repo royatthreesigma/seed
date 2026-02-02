@@ -14,7 +14,7 @@ WORKDIR /frontend
 ENV NEXT_TELEMETRY_DISABLED=1
 
 # Re-use previously cached node_modules, then copy rest of the codebase
-COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /frontend/node_modules ./node_modules
 COPY . .
 
 # Optional: output=standalone gives a self-contained server folder
@@ -42,23 +42,23 @@ ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1
 
 # Copy the minimal runtime artefacts
-COPY --from=builder /app/.next ./.next
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/package.json ./package.json
-COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /frontend/.next ./.next
+COPY --from=builder /frontend/public ./public
+COPY --from=builder /frontend/package.json ./package.json
+COPY --from=builder /frontend/node_modules ./node_modules
 
 # Add an unprivileged user for security first
 RUN addgroup -g 1001 -S nextjs && adduser -S nextjs -G nextjs -u 1001
 
 # Change ownership of the app directory to the nextjs user
-RUN chown -R nextjs:nextjs /app
+RUN chown -R nextjs:nextjs /frontend
 
 # Switch to the nextjs user
 USER nextjs
 
 # If built with --output standalone, uncomment:
-# COPY --from=builder /app/.next/standalone ./ 
-# COPY --from=builder /app/.next/static ./.next/static
+# COPY --from=builder /frontend/.next/standalone ./ 
+# COPY --from=builder /frontend/.next/static ./.next/static
 
 EXPOSE 3000
 CMD ["npm", "start"]
