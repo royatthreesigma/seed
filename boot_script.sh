@@ -84,6 +84,7 @@ fi
 
 # Also allow 3000 and 8001 through firewall
 ufw allow 3000/tcp >/dev/null 2>&1 || true
+ufw allow 8000/tcp >/dev/null 2>&1 || true
 ufw allow 8001/tcp >/dev/null 2>&1 || true
 
 # Start services

@@ -547,8 +547,9 @@ async def download_workspace_zip():
         timestamp = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
         filename = f"workspace-{timestamp}.zip"
 
-        # Add shpbl to exclusions
-        exclude_dirs = DIRECTORIES_TO_EXCLUDE | {"shpbl"}
+        # Add shpbl and nginx to exclusions
+        exclude_dirs = DIRECTORIES_TO_EXCLUDE | {"shpbl", "nginx"}
+        exclude_files = FILES_TO_EXCLUDE | {"boot_script.sh"}
 
         # Create zip in memory
         buffer = BytesIO()
@@ -559,7 +560,7 @@ async def download_workspace_zip():
 
                 for file in files:
                     # Skip excluded files
-                    if file in FILES_TO_EXCLUDE:
+                    if file in exclude_files:
                         continue
 
                     file_path = Path(root) / file

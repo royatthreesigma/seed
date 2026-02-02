@@ -6,15 +6,17 @@ services:
     container_name: proxy
     restart: unless-stopped
     ports:
-      - "80:80"       # For ACME validation
-      - "3000:3000"   # HTTPS frontend
-      - "8001:8001"   # HTTPS API
+      - "80:80" # For ACME validation
+      - "3000:3000" # HTTPS frontend
+      - "8000:8000" # HTTPS backend API
+      - "8001:8001" # HTTPS shpbl API
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./nginx/ssl:/etc/nginx/ssl:ro
     depends_on:
       - frontend
       - shpbl
+      - backend
     networks:
       - edge
 
@@ -41,7 +43,7 @@ services:
     env_file:
       - .env
     expose:
-      - "8000"    # Internal only, accessed by shpbl/frontend
+      - "8000" # Internal only, accessed by shpbl/frontend
     volumes:
       - ./backend:/backend
     command: sh -c "pip install -r requirements.txt && python manage.py runserver 0.0.0.0:8000"
@@ -58,7 +60,7 @@ services:
       target: dev
     container_name: frontend
     expose:
-      - "3000"    # Internal only, proxy handles public access
+      - "3000" # Internal only, proxy handles public access
     volumes:
       - ./frontend:/frontend
       - /mnt/node_modules:/frontend/node_modules
@@ -78,7 +80,7 @@ services:
     env_file:
       - .env
     expose:
-      - "8001"    # Internal only, proxy handles public access
+      - "8001" # Internal only, proxy handles public access
     volumes:
       - .:/workspace
       - ./shpbl:/shpbl
