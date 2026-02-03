@@ -23,6 +23,7 @@ services:
   db:
     image: postgres:17-alpine3.22
     container_name: db
+    restart: unless-stopped
     volumes:
       - /mnt/db-data:/var/lib/postgresql/data
     env_file:
@@ -40,6 +41,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: backend
+    restart: unless-stopped
     env_file:
       - .env
     expose:
@@ -59,6 +61,7 @@ services:
       dockerfile: Dockerfile
       target: dev
     container_name: frontend
+    restart: unless-stopped
     expose:
       - "3000" # Internal only, proxy handles public access
     volumes:
@@ -77,6 +80,7 @@ services:
       context: ./shpbl
       dockerfile: Dockerfile
     container_name: shpbl
+    restart: unless-stopped
     env_file:
       - .env
     expose:
