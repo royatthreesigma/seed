@@ -25,7 +25,7 @@ services:
     container_name: db
     restart: unless-stopped
     volumes:
-      - /mnt/db-data:/var/lib/postgresql/data
+      - /mnt/pr_data/db-data:/var/lib/postgresql/data
     env_file:
       - .env
     healthcheck:
@@ -66,7 +66,7 @@ services:
       - "3000" # Internal only, proxy handles public access
     volumes:
       - ./frontend:/frontend
-      - /mnt/node_modules:/frontend/node_modules
+      - /mnt/pr_data/node_modules:/frontend/node_modules
     env_file:
       - .env
     environment:
