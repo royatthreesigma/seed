@@ -9,6 +9,9 @@ echo "=== boot_script started: $(date -Is) ==="
 MOUNT_DIR="${MOUNT_DIR:-/mnt/pr_data}"
 APP_DIR="${APP_DIR:-/seed}"
 
+# Ensure the node_modules directory exists on the volume
+mkdir -p "${MOUNT_DIR}/node_modules"
+
 ENV_FILE="${ENV_FILE:-${APP_DIR}/.env}"
 SSL_DIR="${SSL_DIR:-${APP_DIR}/nginx/ssl}"
 
