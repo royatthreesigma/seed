@@ -4,6 +4,58 @@ set -euo pipefail
 exec > >(tee -a /var/log/startup-script.log) 2>&1
 echo "=== boot_script started: $(date -Is) ==="
 
+# ========== Configuration ==========
+DEPLOY_USER="${DEPLOY_USER:-deployer}"
+MOUNT_DIR="${MOUNT_DIR:-/mnt/pr_data}"
+APP_DIR="${APP_DIR:-/seed}"
+
+
+# ========== Docker installation ==========
+# Beucase we want the latest Ububtu (24.04) but Docker is not provided by default (at least on DigitalOcean), 
+# we need to select the Ububtu version we want and install `docker` and `docker compose` ourselves
+# This script is adapted from the official Docker installation instructions for Ubuntu: https://www.digitalocean.com/community/tutorials/how-to-install-and-use-docker-on-ubuntu-22-04
+
+# update your existing list of packages
+sudo apt update
+
+# install a few prerequisite packages which let apt use packages over HTTPS
+# `-y` to auto-confirm prompts; some disk space will be consumed
+sudo apt install ca-certificates curl gnupg -y
+
+# add the GPG key for the official Docker repository to your system
+sudo install -m 0755 -d /etc/apt/keyrings
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+sudo chmod a+r /etc/apt/keyrings/docker.gpg
+
+# add the Docker repository to APT sources:
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+# update your existing list of packages again for the addition to be recognized:
+sudo apt update
+
+# make sure you are about to install from the Docker repo instead of the default Ubuntu repo:
+apt-cache policy docker-ce
+
+# install Docker
+# `-y` to auto-confirm prompts; some disk space will be consumed
+sudo apt install docker-ce -y
+
+# if you want to avoid typing sudo whenever you run the docker command, add your username to the docker group
+sudo usermod -aG docker ${USER}
+
+# to apply the new group membership, log out of the server and back in, or type the following:
+su - ${USER}
+
+# if you installed Docker from the official Docker repository in Step 1, you can install the Compose v2 plugin with apt:
+sudo apt update
+# `-y` to auto-confirm prompts; some disk space will be consumed
+sudo apt install docker-compose-plugin -y
+
+
+
+
+
+# ========== User setup and provisioning ==========
 # From user_data you call:
 #   MOUNT_DIR="$MOUNT_DIR" APP_DIR="/seed" bash /seed/boot_script.sh
 MOUNT_DIR="${MOUNT_DIR:-/mnt/pr_data}"
@@ -43,19 +95,13 @@ echo "Droplet public IP: ${PUBLIC_IP}"
 
 mkdir -p "$SSL_DIR" "$ACME_HOME"
 
-# Firewall (idempotent)
-ufw allow 80/tcp   >/dev/null 2>&1 || true
-ufw allow 3000/tcp >/dev/null 2>&1 || true
-ufw allow 8000/tcp >/dev/null 2>&1 || true
-ufw allow 8001/tcp >/dev/null 2>&1 || true
-
 # .env: generate once; reuse on next boots
 if [ -f "$ENV_FILE" ]; then
   echo "Reusing existing .env file (preserving credentials)"
   if grep -q "^NEXT_PUBLIC_API_URL=" "$ENV_FILE"; then
-    sed -i "s|^NEXT_PUBLIC_API_URL=.*|NEXT_PUBLIC_API_URL=https://${PUBLIC_IP}:8000|" "$ENV_FILE"
+    sed -i "s|^NEXT_PUBLIC_API_URL=.*|NEXT_PUBLIC_API_URL=https://${PUBLIC_IP}/api|" "$ENV_FILE"
   else
-    echo "NEXT_PUBLIC_API_URL=https://${PUBLIC_IP}:8000" >> "$ENV_FILE"
+    echo "NEXT_PUBLIC_API_URL=https://${PUBLIC_IP}/api" >> "$ENV_FILE"
   fi
 else
   echo "No .env found. Generating new credentials..."
@@ -69,7 +115,7 @@ POSTGRES_PORT=5432
 DEBUG=true
 SECRET_KEY=$(rand_str 32)
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=your_clerk_key_here
-NEXT_PUBLIC_API_URL=https://${PUBLIC_IP}:8000
+NEXT_PUBLIC_API_URL=https://${PUBLIC_IP}/api
 CLERK_SECRET_KEY=your_clerk_secret_here
 RESEND_API_KEY=your_resend_api_key_here
 ENVEOF

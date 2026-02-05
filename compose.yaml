@@ -6,10 +6,9 @@ services:
     container_name: proxy
     restart: unless-stopped
     ports:
-      - "80:80" # For ACME validation
-      - "3000:3000" # HTTPS frontend
-      - "8000:8000" # HTTPS backend API
-      - "8001:8001" # HTTPS shpbl API
+      - "80:80"
+      - "443:443"
+      - "8001:8001" # for shpbl access
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./nginx/ssl:/etc/nginx/ssl:ro
