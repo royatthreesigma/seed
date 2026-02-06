@@ -13,7 +13,10 @@ logger = logging.getLogger(__name__)
 docker_client = docker.from_env()
 
 # Container configuration
-CONTAINER_WORKDIRS = {"backend": "/backend", "frontend": "/frontend", "db": "/"}
+CONTAINER_WORKDIRS = {"backend": "/backend", "frontend": "/frontend"}
+
+# Maximum output size (characters) to prevent large data exfiltration
+MAX_OUTPUT_LENGTH = 10_000
 
 
 def get_container_workdir(container_name: ContainerName) -> str:
@@ -25,10 +28,10 @@ def exec_in_container(
     container_name: ContainerName, command: str, workdir: Optional[str] = None
 ) -> ShpblResponse:
     """
-    Execute command in specified container
+    Execute command in specified container, confined to the project root.
 
     Args:
-        container_name: Name of the container (api, app, db)
+        container_name: Name of the container (backend, frontend)
         command: Shell command to execute
         workdir: Working directory (defaults to container-specific dir)
 
@@ -42,13 +45,24 @@ def exec_in_container(
         container = docker_client.containers.get(container_name)
         workdir = workdir or get_container_workdir(container_name)
 
+        # Confine execution to the project root directory
+        confined_command = f"cd {workdir} && {command}"
+
         logger.info(f"Executing in {container_name} ({workdir}): {command}")
         result = container.exec_run(
-            cmd=["sh", "-c", command], workdir=workdir, demux=True
+            cmd=["sh", "-c", confined_command], workdir=workdir, demux=True
         )
 
         stdout = result.output[0].decode() if result.output[0] else ""
         stderr = result.output[1].decode() if result.output[1] else ""
+
+        # Truncate output to prevent large data exfiltration
+        stdout_truncated = len(stdout) > MAX_OUTPUT_LENGTH
+        stderr_truncated = len(stderr) > MAX_OUTPUT_LENGTH
+        if stdout_truncated:
+            stdout = stdout[:MAX_OUTPUT_LENGTH] + "\n... [output truncated]"
+        if stderr_truncated:
+            stderr = stderr[:MAX_OUTPUT_LENGTH] + "\n... [output truncated]"
 
         return ShpblResponse(
             success=result.exit_code == 0,

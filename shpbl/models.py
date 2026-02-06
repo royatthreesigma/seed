@@ -1,9 +1,37 @@
 import os
-from pydantic import BaseModel, Field
+import re
+from pydantic import BaseModel, Field, field_validator
 from typing import Optional, Literal, Dict, Any, List
 
 # Type aliases
-ContainerName = Literal["backend", "frontend", "db"]
+ContainerName = Literal["backend", "frontend"]
+
+# Blocked command patterns — matches are case-insensitive substring/regex checks
+# against the raw command string before it reaches the container.
+BLOCKED_COMMAND_PATTERNS: list[re.Pattern] = [
+    # Secret / env leaking
+    re.compile(r"\benv\b", re.IGNORECASE),
+    re.compile(r"\bprintenv\b", re.IGNORECASE),
+    re.compile(r"\bcat\s+\.env\b", re.IGNORECASE),
+    re.compile(r"/etc/shadow", re.IGNORECASE),
+    re.compile(r"/etc/passwd", re.IGNORECASE),
+    # Container / network escape
+    re.compile(r"\bdocker\b", re.IGNORECASE),
+    re.compile(r"\bcurl\b", re.IGNORECASE),
+    re.compile(r"\bwget\b", re.IGNORECASE),
+    re.compile(r"\bnc\b", re.IGNORECASE),
+    re.compile(r"\bncat\b", re.IGNORECASE),
+    re.compile(r"\bnetcat\b", re.IGNORECASE),
+    re.compile(r"\bssh\b", re.IGNORECASE),
+    re.compile(r"\bscp\b", re.IGNORECASE),
+    re.compile(r"\bnsenter\b", re.IGNORECASE),
+    re.compile(r"\bsocat\b", re.IGNORECASE),
+    # Path traversal / system access
+    re.compile(r"\.\./\.\.", re.IGNORECASE),          # ../../
+    re.compile(r"/proc\b", re.IGNORECASE),
+    re.compile(r"/sys\b", re.IGNORECASE),
+    re.compile(r"/var/run/docker\.sock", re.IGNORECASE),
+]
 
 
 class SearchCandidateRequest(BaseModel):
@@ -88,6 +116,16 @@ class RunCommandRequest(BaseModel):
         ..., description="Name of the container to run the command in"
     )
     command: str = Field(..., description="Raw shell command to execute")
+
+    @field_validator("command")
+    @classmethod
+    def validate_command_safety(cls, v: str) -> str:
+        for pattern in BLOCKED_COMMAND_PATTERNS:
+            if pattern.search(v):
+                raise ValueError(
+                    f"Command blocked: matches restricted pattern '{pattern.pattern}'"
+                )
+        return v
 
 
 class UpdateEnvVariableRequest(BaseModel):

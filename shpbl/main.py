@@ -437,7 +437,6 @@ async def get_workspace_filetree():
     container_commands = {
         "backend": f"python -c '{escaped_python}' {source_arg}",
         "frontend": f"node -e '{escaped_node}' {source_arg}",
-        "db": None,  # Skip database container
     }
 
     # Get file list from each container

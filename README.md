@@ -1,2 +1,0 @@
-# seed
-template for shpbl

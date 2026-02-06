@@ -2,7 +2,7 @@ from typing import List, Literal, Optional, TypedDict, Any, Dict
 
 from pydantic import BaseModel, Field
 
-ContainerName = Literal["frontend", "backend"]
+from models import ContainerName  # single source of truth
 
 
 class CreateOrOverwriteFile(BaseModel):
