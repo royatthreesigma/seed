@@ -1,9 +1,10 @@
 """Docker container operations"""
 
+import subprocess
 import docker
 import logging
 from fastapi import HTTPException
-from typing import Optional
+from typing import List, Optional
 
 from models import ShpblResponse, ContainerName
 

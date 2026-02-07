@@ -13,7 +13,7 @@ from io import BytesIO
 from fastapi import Response
 from datetime import datetime, timezone
 from typing import Dict, Any
-from container import exec_in_container
+from container import exec_in_container, recreate_services
 from helpers.file_scripts import GET_FILE_LIST_NODE, GET_FILE_LIST_PYTHON
 from helpers.helpers import DIRECTORIES_TO_EXCLUDE, FILES_TO_EXCLUDE
 from routers import api_service, app_service, workspace_service, db_service  # type: ignore
@@ -104,7 +104,8 @@ async def health_check() -> ShpblResponse:
 
         if db_status == "running":
             result = db_container.exec_run(
-                cmd=["pg_isready", "-U", "postgres"], demux=True
+                cmd=["pg_isready", "-U", os.getenv("POSTGRES_USER", "postgres")],
+                demux=True,
             )
             latency = f"{round((time.time() - db_check_start) * 1000, 2)}ms"
             if result.exit_code == 0:
@@ -161,9 +162,9 @@ async def health_check() -> ShpblResponse:
         if backend_status == "running":
             async with httpx.AsyncClient(timeout=5.0) as client:
                 try:
-                    response = await client.get("http://backend:8000/")
+                    response = await client.get("http://backend:8000/health/")
                     latency = f"{round((time.time() - api_check_start) * 1000, 2)}ms"
-                    if response.status_code in [200, 404]:
+                    if response.status_code not in [500, 502, 503, 504]:
                         checks["api"] = ServiceCheck(
                             name="API Service",
                             description="Backend REST API service",
@@ -229,7 +230,7 @@ async def health_check() -> ShpblResponse:
                 try:
                     response = await client.get("http://frontend:3000")
                     latency = f"{round((time.time() - web_check_start) * 1000, 2)}ms"
-                    if response.status_code == 200:
+                    if response.status_code not in [500, 502, 503, 504]:
                         checks["web"] = ServiceCheck(
                             name="Web Service",
                             description="Frontend web application",

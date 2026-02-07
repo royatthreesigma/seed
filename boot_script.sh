@@ -73,8 +73,13 @@ setup_as_deploy_user() {
   mkdir -p "${MOUNT_DIR}/node_modules"
 
   local env_file="${APP_DIR}/.env"
-  local ssl_dir="${APP_DIR}/nginx/ssl"
-  local acme_home="${MOUNT_DIR}/acme"
+
+  # SSL certs and acme state live on the droplet filesystem, NOT on the
+  # persistent volume.  Every droplet swap brings a new IP, so the old cert's
+  # SAN won't match anyway.  Keeping these ephemeral means a fresh cert is
+  # issued on every boot — no stale-cert / hostname-mismatch surprises.
+  local ssl_dir="/etc/ssl/shpbl"
+  local acme_home="/tmp/acme"
 
   mkdir -p "$ssl_dir" "$acme_home"
 
@@ -109,22 +114,23 @@ EOF
 
   cd "$APP_DIR"
 
-  # Issue SSL cert if missing
-  if [ ! -s "${ssl_dir}/fullchain.pem" ] || [ ! -s "${ssl_dir}/privkey.pem" ]; then
-    echo "Issuing Let's Encrypt cert for ${public_ip}..."
-    docker run --rm --net=host \
-      -v "${acme_home}:/acme.sh" \
-      -v "${ssl_dir}:/ssl" \
-      neilpang/acme.sh \
-      sh -c "
-        acme.sh --home /acme.sh --set-default-ca --server letsencrypt &&
-        acme.sh --home /acme.sh --issue --standalone -d '${public_ip}' --cert-profile shortlived --keylength ec-256 &&
-        acme.sh --home /acme.sh --install-cert -d '${public_ip}' --ecc \
-          --fullchain-file /ssl/fullchain.pem \
-          --key-file /ssl/privkey.pem
-      "
-    chmod 600 "${ssl_dir}/privkey.pem" 2>/dev/null || true
-  fi
+  # Always issue a fresh cert — no conditional check.
+  # New droplet ⇒ new IP ⇒ old cert is useless.  --force ensures acme.sh
+  # doesn't skip issuance because of leftover state in /tmp/acme.
+  # Short-lived profile (~6-day expiry) is fine: droplets rarely outlive that.
+  echo "Issuing Let's Encrypt cert for ${public_ip}..."
+  docker run --rm --net=host \
+    -v "${acme_home}:/acme.sh" \
+    -v "${ssl_dir}:/ssl" \
+    neilpang/acme.sh \
+    sh -c "
+      acme.sh --home /acme.sh --set-default-ca --server letsencrypt &&
+      acme.sh --home /acme.sh --issue --force --standalone -d '${public_ip}' --cert-profile shortlived --keylength ec-256 &&
+      acme.sh --home /acme.sh --install-cert -d '${public_ip}' --ecc \
+        --fullchain-file /ssl/fullchain.pem \
+        --key-file /ssl/privkey.pem
+    "
+  chmod 600 "${ssl_dir}/privkey.pem" 2>/dev/null || true
 
   # Start services
   docker compose up -d --build

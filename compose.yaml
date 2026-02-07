@@ -10,7 +10,10 @@ services:
       - "443:443"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./nginx/ssl:/etc/nginx/ssl:ro
+      # Certs live on the droplet's local FS (/etc/ssl/shpbl), not in the repo
+      # or on the persistent volume.  boot_script.sh issues a fresh cert for
+      # the current droplet IP on every boot, so these files are always valid.
+      - /etc/ssl/shpbl:/etc/nginx/ssl:ro
     depends_on:
       - frontend
       - shpbl
