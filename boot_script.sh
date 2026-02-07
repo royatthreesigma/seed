@@ -56,6 +56,15 @@ setup_as_root() {
   [ -d "$APP_DIR" ] && chown -R "${DEPLOY_USER}:${DEPLOY_USER}" "$APP_DIR"
   [ -d "$MOUNT_DIR" ] && chown -R "${DEPLOY_USER}:${DEPLOY_USER}" "$MOUNT_DIR"
 
+  # Pre-create the ephemeral SSL dir while we're still root, because
+  # /etc/ssl is owned by root and the deploy user can't mkdir there.
+  mkdir -p /etc/ssl/shpbl
+  chown "${DEPLOY_USER}:${DEPLOY_USER}" /etc/ssl/shpbl
+
+  # Let the deploy user append to the log when Phase 2 re-opens tee.
+  touch /var/log/startup-script.log
+  chown "${DEPLOY_USER}:${DEPLOY_USER}" /var/log/startup-script.log
+
   echo "Root setup complete. Re-executing as $DEPLOY_USER..."
   
   # Re-run this script as the deploy user
@@ -78,10 +87,10 @@ setup_as_deploy_user() {
   # persistent volume.  Every droplet swap brings a new IP, so the old cert's
   # SAN won't match anyway.  Keeping these ephemeral means a fresh cert is
   # issued on every boot — no stale-cert / hostname-mismatch surprises.
-  local ssl_dir="/etc/ssl/shpbl"
+  local ssl_dir="/etc/ssl/shpbl"   # created by root in Phase 1
   local acme_home="/tmp/acme"
 
-  mkdir -p "$ssl_dir" "$acme_home"
+  mkdir -p "$acme_home"
 
   # Get public IP from DO metadata
   local public_ip
